@@ -17,7 +17,7 @@ def read_env(env_key, needed=True):
     return
 
 
-def run_menu():
+def run_menu_ovs_macvlan():
     config_toml_path = read_env('TOML_PATH')
     outdir_path = read_env('OUTDIR_PATH')
 
@@ -37,6 +37,18 @@ def run_menu():
         elif num == 1:
             from gennet.docker.macvlan import gen
             gen.generate_scripts(outdir_path, params)
+
+
+def run_menu():
+    config_toml_path = read_env('TOML_PATH')
+    outdir_path = read_env('OUTDIR_PATH')
+    if not config_toml_path or not outdir_path:
+        print('TOML_PATH and OUTDIR_PATH are required')
+        sys.exit(1)
+    params = misc.read_toml(config_toml_path)
+    from gennet.docker.macvlan import gen
+    gen.generate_scripts(outdir_path, params)
+    print(f'created {outdir_path}')
 
 
 if __name__ == '__main__':
