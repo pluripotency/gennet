@@ -1,0 +1,19 @@
+[project]
+name = "gennet"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Masayoshi Kokuryo", email = "masakoku@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "toml>=0.10.2",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.10,<0.10.0"]
+build-backend = "uv_build"
+
+[project.scripts]
+run_menu= "gennet.main:run_menu"

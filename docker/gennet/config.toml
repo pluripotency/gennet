@@ -1,0 +1,158 @@
+[[iface]]
+phyif='eth1'
+subnet='10.30.0.0/24'
+gateway='10.30.0.1'
+
+[[iface.vlan]]
+vlanid=202
+subnet='192.168.202.0/24'
+gateway='192.168.202.254'
+
+[[container]]
+type='gw'
+container_name='gw_v3000'
+rules="""
+#! /bin/sh
+echo 1 > /proc/sys/net/ipv4/ip_forward
+
+#Flush & Reset
+iptables -F
+iptables -t nat -F
+iptables -X
+
+#loopback
+#iptables -A INPUT -i lo -j ACCEPT
+#iptables -A OUTPUT -o lo -j ACCEPT
+
+#Default Rule
+iptables -P INPUT DROP
+iptables -P OUTPUT DROP
+iptables -P FORWARD DROP
+
+iptables -A FORWARD -i eth0 -m state --state NEW,INVALID -j DROP
+iptables -A FORWARD -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+iptables -A INPUT -p icmp -j ACCEPT
+iptables -A OUTPUT -p icmp -j ACCEPT
+
+#NAT(masquerade)
+iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+"""
+[[container.net]]
+ip='10.30.0.51'
+[[container.net]]
+ip='192.168.202.254'
+
+[[container]]
+type='rsyslogd'
+container_name='rsyslogd_v0202'
+rules = """
+local1.* /var/log/local1.log
+"""
+[[container.net]]
+ip='192.168.202.14'
+
+[[container]]
+type='tftpd'
+container_name='tftpd_v0202'
+[[container.net]]
+ip='192.168.202.69'
+
+[[container]]
+type='ntpd'
+container_name='ntpd_v0202'
+servers = """
+server ntp.nict.jp
+server ntp.jst.mfeed.ad.jp
+"""
+resolv_conf = """
+search local
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+"""
+[[container.net]]
+ip='192.168.202.123'
+
+[[container]]
+type='dhcpd'
+container_name='dhcpd_v0202'
+subnets="""
+subnet 192.168.202.0 netmask 255.255.255.0 {
+    option routers 192.168.202.254;
+    option subnet-mask 255.255.255.0;
+    range 192.168.202.200 192.168.202.250;
+    option broadcast-address 192.168.202.255;
+    option domain-name-servers 192.168.202.53;
+    option domain-name "local";
+    option domain-search "local";
+}
+"""
+[[container.net]]
+ip='192.168.202.67'
+
+[[container]]
+type='mailcatcher'
+container_name='mailcatcher_v0202'
+http_port=80
+smtp_port=25
+[[container.net]]
+ip='192.168.202.25'
+
+[[container]]
+type='dnsmasq'
+container_name='dnsmasq_v0202'
+hosts="""
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+
+192.168.202.10 a8desk2
+192.168.202.12 radius
+192.168.202.14 rsyslog
+192.168.202.25 mailcatcher
+192.168.202.53 dns
+192.168.202.67 dhcp
+192.168.202.69 tftp
+192.168.202.123 ntp
+192.168.202.254 gw
+"""
+resolv_conf = """
+search local
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+"""
+[[container.net]]
+ip='192.168.202.53'
+
+[[container]]
+type='radiusd'
+container_name='radiusd_v0202'
+clients_conf="""
+client  localhost {
+  ipaddr = 127.0.0.1
+  secret = testing123
+}
+client  192.168.202.0/24 {
+  secret = password
+}
+"""
+users="""
+525400AABBCC Cleartext-Password := "525400AABBCC"
+        Tunnel-Type = VLAN,
+        Tunnel-Medium-Type = IEEE-802,
+        Tunnel-Private-Group-Id = 2000
+v2000   Cleartext-Password := "v2000"
+        Tunnel-Type = VLAN,
+        Tunnel-Medium-Type = IEEE-802,
+        Tunnel-Private-Group-Id = 2000
+"""
+proxy_conf="""
+proxy server {
+    default_fallback = no
+}
+realm LOCAL {
+        #  If we do not specify a server pool, the realm is LOCAL, and
+        #  requests are not proxied to it.
+}
+"""
+[[container.net]]
+ip='192.168.202.12'
