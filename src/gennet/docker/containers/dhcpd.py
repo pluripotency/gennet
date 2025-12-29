@@ -1,5 +1,6 @@
 from gennet.lib import misc
 from gennet.docker import common
+IMAGE_NAME='alpine-dhcpd'
 dhcpd_cmd = ["/usr/sbin/dhcpd", "-4", "-f", "-d", "--no-pid", "-cf", "/etc/dhcp/dhcpd.conf", "-lf", "/var/lib/dhcp/dhcpd.leases" ]
 
 
@@ -25,7 +26,7 @@ def create_dhcpd_start_str(container_name, netop, preup_script, docker_cmd=''):
     return misc.del_indent(f"""
     #! /bin/bash
     CURRENT=$(cd $(dirname $0);pwd)
-    IMAGE_NAME=alpine-dhcpd
+    IMAGE_NAME={IMAGE_NAME}
     CONTAINER_NAME={container_name}
     
     """) + preup_script + misc.del_indent(rf"""
@@ -94,20 +95,54 @@ def create_dhcpd_conf_str(subnet=None):
 
     """) + subnet
 
-
-def create_dhcpd_files():
-    container_name = 'dhcpd'
-    output_dir = f'/tmp/dhcpd'
-    misc.prepare_clean_dir(output_dir)
-    misc.prepare_clean_dir(f'{output_dir}/conf')
+def create_base_files(output_dir, container_name, item):
+    subnets = None
+    if 'subnets' in item:
+        subnets = item['subnets']
+    cont_dir = f'{output_dir}/{container_name}'
+    misc.prepare_clean_dir(cont_dir)
+    misc.prepare_clean_dir(f'{cont_dir}/conf')
     file_list = [
-        [f'{output_dir}/Dockerfile', create_dhcpd_dockerfile_str()],
-        [f'{output_dir}/start.sh', create_start_sh_str(container_name)],
-        [f'{output_dir}/stop.sh', common.create_stop_sh_str(container_name)],
-        [f'{output_dir}/build.sh', common.create_build_sh_str('alpine-dhcpd')],
-        [f'{output_dir}/conf/dhcpd.conf', create_dhcpd_conf_str()],
+        [f'{cont_dir}/Dockerfile', create_dhcpd_dockerfile_str()],
+        [f'{cont_dir}/build.sh', common.create_build_sh_str(IMAGE_NAME)],
+        [f'{cont_dir}/stop.sh', common.create_stop_sh_str(container_name)],
+        [f'{cont_dir}/conf/dhcpd.conf', create_dhcpd_conf_str(subnets)],
+        [f'{cont_dir}/conf/dhcpd.leases', ''],
+    ]
+    return cont_dir, file_list
+
+def create_bridge_files(output_dir, container_name, net_list, item):
+    cont_dir, file_list = create_base_files(output_dir, container_name, item)
+    netop = '-p 67:67/udp'
+    preup_script = common.create_build_and_stop_str()
+    file_list += [
+        [f'{cont_dir}/start.sh', create_dhcpd_start_str(container_name, netop, preup_script)],
     ]
     misc.write_file_list(file_list)
-    return output_dir
+    return container_name
 
+def create_hostnet_files(output_dir, container_name, net_list, item):
+    cont_dir, file_list = create_base_files(output_dir, container_name, item)
+    netop = '--network=host'
+    preup_script = common.create_build_and_stop_str()
+    file_list += [
+        [f'{cont_dir}/start.sh', create_dhcpd_start_str(container_name, netop, preup_script)],
+    ]
+    misc.write_file_list(file_list)
+    return container_name
 
+def create_macvlan_start_str(container_name, net_list):
+    from gennet.docker.macvlan import macvlan_str
+    [pre_str, netop, post_str] = macvlan_str.create_macvlan_prepost_str(net_list)
+    preup_script = common.create_build_and_stop_str() + pre_str
+    container_macvlan_str = dhcpd.create_dhcpd_start_str(container_name, netop, preup_script)
+    container_macvlan_str += post_str
+    return container_macvlan_str
+
+def create_macvlan_files(output_dir, container_name, net_list, item):
+    cont_dir, file_list = create_base_files(output_dir, container_name, item)
+    file_list += [
+        [f'{cont_dir}/start.sh', create_macvlan_start_str(container_name, net_list)],
+    ]
+    misc.write_file_list(file_list)
+    return container_name

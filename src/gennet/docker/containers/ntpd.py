@@ -1,5 +1,6 @@
 from gennet.lib import misc
 from gennet.docker import common
+IMEAGE_NAME='alpine-ntpd'
 
 
 def create_ntpd_dockerfile_str():
@@ -21,7 +22,7 @@ def create_ntpd_start_str(container_name, netop, preup_script, docker_cmd='', dn
     return misc.del_indent(f"""
     #! /bin/bash
     CURRENT=$(cd $(dirname $0);pwd)
-    IMAGE_NAME=alpine-ntpd
+    IMAGE_NAME={IMEAGE_NAME}
     CONTAINER_NAME={container_name}
     
     """) + preup_script + misc.del_indent(rf"""
@@ -36,12 +37,6 @@ def create_ntpd_start_str(container_name, netop, preup_script, docker_cmd='', dn
         $IMAGE_NAME {docker_cmd}
     
     """)
-
-
-def create_start_sh_str(container_name):
-    netop = '-p 123:123/udp'
-    preup_script = common.create_build_and_stop_str()
-    return create_ntpd_start_str(container_name, netop, preup_script)
 
 
 def create_check_sh_str(container_name):
@@ -75,20 +70,61 @@ def create_resolv_conf_str(resolve_conf=None):
 
     """)
 
+def create_base_files(output_dir, container_name, item):
+    servers = None
+    if 'servers' in item:
+        servers = item['servers']
+    resolv_conf = None
+    if 'resolv_conf' in item:
+        resolv_conf = item['resolv_conf']
+    cont_dir = f'{output_dir}/{container_name}'
+    misc.prepare_clean_dir(cont_dir)
+    misc.prepare_clean_dir(f'{cont_dir}/conf')
 
-def create_ntpd_files():
-    container_name = 'ntpd'
-    output_dir = '/tmp/ntpd'
-    misc.prepare_clean_dir(output_dir)
-    misc.prepare_clean_dir(f'{output_dir}/conf')
     file_list = [
-        [f'{output_dir}/Dockerfile', create_ntpd_dockerfile_str()],
-        [f'{output_dir}/start.sh', create_start_sh_str(container_name)],
-        [f'{output_dir}/stop.sh', common.create_stop_sh_str(container_name)],
-        [f'{output_dir}/build.sh', common.create_build_sh_str('alpine-ntpd')],
-        [f'{output_dir}/check.sh', create_check_sh_str(container_name)],
-        [f'{output_dir}/conf/ntpd.conf', create_ntpd_conf_str()],
-        [f'{output_dir}/conf/resolv.conf', create_resolv_conf_str()],
+        [f'{cont_dir}/Dockerfile', create_ntpd_dockerfile_str()],
+        [f'{cont_dir}/build.sh', common.create_build_sh_str(IMEAGE_NAME)],
+        [f'{cont_dir}/stop.sh', common.create_stop_sh_str(container_name)],
+        [f'{cont_dir}/check.sh', create_check_sh_str(container_name)],
+        [f'{cont_dir}/conf/ntpd.conf', create_ntpd_conf_str(servers)],
+        [f'{cont_dir}/conf/resolv.conf', create_resolv_conf_str(resolv_conf)],
+    ]
+    return cont_dir, file_list
+
+def create_bridge_files(output_dir, container_name, net_list, item):
+    cont_dir, file_list = create_base_files(output_dir, container_name, item)
+    netop = '-p 123:123/udp'
+    preup_script = common.create_build_and_stop_str()
+    file_list += [
+        [f'{cont_dir}/start.sh', create_ntpd_start_str(container_name, netop, preup_script)],
     ]
     misc.write_file_list(file_list)
-    return output_dir
+    return container_name
+
+def create_hostnet_files(output_dir, container_name, net_list, item):
+    cont_dir, file_list = create_base_files(output_dir, container_name, item)
+    netop = '--network=host'
+    preup_script = common.create_build_and_stop_str()
+    file_list += [
+        [f'{cont_dir}/start.sh', create_ntpd_start_str(container_name, netop, preup_script)],
+    ]
+    misc.write_file_list(file_list)
+    return container_name
+
+def create_macvlan_start_str(container_name, net_list):
+    from gennet.docker.macvlan import macvlan_str
+    [pre_str, netop, post_str] = macvlan_str.create_macvlan_prepost_str(net_list)
+    preup_script = common.create_build_and_stop_str() + pre_str
+    container_macvlan_str = create_ntpd_start_str(container_name, netop, preup_script)
+    container_macvlan_str += post_str
+    return container_macvlan_str
+
+def create_macvlan_files(output_dir, container_name, net_list, item):
+    cont_dir, file_list = create_base_files(output_dir, container_name, item)
+    file_list += [
+        [f'{cont_dir}/start.sh', create_macvlan_start_str(container_name, net_list)],
+    ]
+    misc.write_file_list(file_list)
+    return container_name
+
+

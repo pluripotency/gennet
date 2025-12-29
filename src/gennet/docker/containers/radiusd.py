@@ -158,22 +158,41 @@ def create_users_str(users=None):
 
     """)
 
-
-def create_radiusd_files():
-    container_name = 'radiusd'
-    output_dir = f'/tmp/radiusd'
-    misc.prepare_clean_dir(output_dir)
-    misc.prepare_clean_dir(f'{output_dir}/conf')
+def create_base_files(output_dir, container_name, item):
+    clients_conf = None
+    if 'clients_conf' in item:
+        clients_conf = item['clients_conf']
+    users = None
+    if 'users' in item:
+        users = item['users']
+    proxy_conf = None
+    if 'proxy_conf' in item:
+        proxy_conf = item['proxy_conf']
+    cont_dir = f'{output_dir}/{container_name}'
+    misc.prepare_clean_dir(cont_dir)
+    misc.prepare_clean_dir(f'{cont_dir}/conf')
     file_list = [
-        [f'{output_dir}/Dockerfile', create_radiusd_dockerfile_str()],
-        [f'{output_dir}/start.sh', create_start_sh_str(container_name)],
-        [f'{output_dir}/stop.sh', common.create_stop_sh_str(container_name)],
-        [f'{output_dir}/build.sh', common.create_build_sh_str('alpine-freeradiusd')],
-        [f'{output_dir}/conf/clients.conf', create_clients_conf_str()],
-        [f'{output_dir}/conf/users', create_users_str()],
-        [f'{output_dir}/conf/proxy.conf', create_proxy_conf_str()],
+        [f'{cont_dir}/Dockerfile', radiusd.create_radiusd_dockerfile_str()],
+        [f'{cont_dir}/build.sh', common.create_build_sh_str('alpine-freeradius')],
+        [f'{cont_dir}/stop.sh', common.create_stop_sh_str(container_name)],
+        [f'{cont_dir}/conf/clients.conf', radiusd.create_clients_conf_str(clients_conf)],
+        [f'{cont_dir}/conf/users', radiusd.create_users_str(users)],
+        [f'{cont_dir}/conf/proxy.conf', radiusd.create_proxy_conf_str(proxy_conf)],
+    ]
+    return cont_dir, file_list
+
+def create_macvlan_start_str(container_name, net_list):
+    from gennet.docker.macvlan import macvlan_str
+    [pre_str, netop, post_str] = macvlan_str.create_macvlan_prepost_str(net_list)
+    preup_script = common.create_build_and_stop_str() + pre_str
+    container_macvlan_str = radiusd.create_radiusd_start_str(container_name, netop, preup_script)
+    container_macvlan_str += post_str
+    return container_macvlan_str
+
+def create_macvlan_files(output_dir, container_name, net_list, item):
+    cont_dir, file_list = create_base_files(output_dir, container_name, item)
+    file_list = [
+        [f'{cont_dir}/start.sh', create_macvlan_start_str(container_name, net_list)],
     ]
     misc.write_file_list(file_list)
-    return output_dir
-
-
+    return container_name

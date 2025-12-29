@@ -16,7 +16,6 @@ ex_iface_list = [
             }
 
         ]
-
     }
 ]
 ex_translated_macvlan_list = [
@@ -108,29 +107,32 @@ def create_start_stop_all(outdir_path, container_name_list):
 
 def generate_container_scripts(outdir_path, cont_type, container_name, net_list, item):
     if cont_type == 'tftpd':
-        from gennet.docker.macvlan import macvlan_tftpd
-        return macvlan_tftpd.create_files(outdir_path, container_name, net_list)
+        from gennet.docker.containers import tftpd
+        return tftpd.create_macvlan_files(outdir_path, container_name, net_list)
     elif cont_type == 'dhcpd':
-        from gennet.docker.macvlan import macvlan_dhcpd
-        return macvlan_dhcpd.create_files(outdir_path, container_name, net_list, item)
+        from gennet.docker.containers import dhcpd
+        return dhcpd.create_macvlan_files(outdir_path, container_name, net_list, item)
+    elif cont_type == 'kea-dhcpd':
+        from gennet.docker.containers import kea_dhcpd
+        return kea_dhcpd.create_macvlan_files(outdir_path, container_name, net_list, item)
     elif cont_type == 'gw':
-        from gennet.docker.macvlan import macvlan_gw
-        return macvlan_gw.create_files(outdir_path, container_name, net_list, item)
+        from gennet.docker.containers import gw
+        return gw.create_macvlan_files(outdir_path, container_name, net_list, item)
     elif cont_type == 'ntpd':
-        from gennet.docker.macvlan import macvlan_ntpd
-        return macvlan_ntpd.create_files(outdir_path, container_name, net_list, item)
+        from gennet.docker.containers import ntpd
+        return ntpd.create_macvlan_files(outdir_path, container_name, net_list, item)
     elif cont_type == 'rsyslogd':
-        from gennet.docker.macvlan import macvlan_rsyslogd
-        return macvlan_rsyslogd.create_files(outdir_path, container_name, net_list, item)
+        from gennet.docker.containers import rsyslog
+        return rsyslog.create_macvlan_files(outdir_path, container_name, net_list, item)
     elif cont_type == 'dnsmasq':
-        from gennet.docker.macvlan import macvlan_dnsmasq
-        return macvlan_dnsmasq.create_files(outdir_path, container_name, net_list, item)
+        from gennet.docker.containers import dnsmasq
+        return dnsmasq.create_macvlan_files(outdir_path, container_name, net_list, item)
     elif cont_type == 'mailcatcher':
-        from gennet.docker.macvlan import macvlan_mailcatcher
-        return macvlan_mailcatcher.create_files(outdir_path, container_name, net_list, item)
+        from gennet.docker.containers import mailcatcher
+        return mailcatcher.create_macvlan_files(outdir_path, container_name, net_list, item)
     elif cont_type == 'radiusd':
-        from gennet.docker.macvlan import macvlan_radiusd
-        return macvlan_radiusd.create_files(outdir_path, container_name, net_list, item)
+        from gennet.docker.containers import radiusd
+        return radiusd.create_macvlan_files(outdir_path, container_name, net_list, item)
     else:
         print(red(f'no such container type: {cont_type}'), flush=True)
         sys.exit(1)
