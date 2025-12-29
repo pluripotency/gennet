@@ -172,12 +172,12 @@ def create_base_files(output_dir, container_name, item):
     misc.prepare_clean_dir(cont_dir)
     misc.prepare_clean_dir(f'{cont_dir}/conf')
     file_list = [
-        [f'{cont_dir}/Dockerfile', radiusd.create_radiusd_dockerfile_str()],
+        [f'{cont_dir}/Dockerfile', create_radiusd_dockerfile_str()],
         [f'{cont_dir}/build.sh', common.create_build_sh_str('alpine-freeradius')],
         [f'{cont_dir}/stop.sh', common.create_stop_sh_str(container_name)],
-        [f'{cont_dir}/conf/clients.conf', radiusd.create_clients_conf_str(clients_conf)],
-        [f'{cont_dir}/conf/users', radiusd.create_users_str(users)],
-        [f'{cont_dir}/conf/proxy.conf', radiusd.create_proxy_conf_str(proxy_conf)],
+        [f'{cont_dir}/conf/clients.conf', create_clients_conf_str(clients_conf)],
+        [f'{cont_dir}/conf/users', create_users_str(users)],
+        [f'{cont_dir}/conf/proxy.conf', create_proxy_conf_str(proxy_conf)],
     ]
     return cont_dir, file_list
 
@@ -185,7 +185,7 @@ def create_macvlan_start_str(container_name, net_list):
     from gennet.docker.macvlan import macvlan_str
     [pre_str, netop, post_str] = macvlan_str.create_macvlan_prepost_str(net_list)
     preup_script = common.create_build_and_stop_str() + pre_str
-    container_macvlan_str = radiusd.create_radiusd_start_str(container_name, netop, preup_script)
+    container_macvlan_str = create_radiusd_start_str(container_name, netop, preup_script)
     container_macvlan_str += post_str
     return container_macvlan_str
 

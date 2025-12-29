@@ -110,7 +110,7 @@ def create_macvlan_start_str(container_name, net_list):
     from gennet.docker.macvlan import macvlan_str
     [pre_str, netop, post_str] = macvlan_str.create_macvlan_prepost_str(net_list)
     preup_script = common.create_build_and_stop_str() + pre_str
-    container_macvlan_str = dnsmasq.create_dnsmasq_start_str(container_name, netop, preup_script)
+    container_macvlan_str = create_start_str(container_name, netop, preup_script)
     container_macvlan_str += post_str
     return container_macvlan_str
 
